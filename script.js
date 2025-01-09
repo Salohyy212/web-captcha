@@ -1,9 +1,9 @@
 let currentRequest = 1;
 let totalRequests = 0;
-let isCaptchaResolved = false; // Initialisé à false
-let wafToken = null; // Initialisé à null
+let isCaptchaResolved = false; 
+let wafToken = null; 
 
-// Fonction pour afficher le CAPTCHA
+
 function showMyCaptcha(onCaptchaResolved) {
     const container = document.querySelector("#my-captcha-container");
 
@@ -21,7 +21,7 @@ function showMyCaptcha(onCaptchaResolved) {
     });
 }
 
-// Fonction pour effectuer une requête GET et afficher "Forbidden"
+
 async function fetchAndDisplay(index) {
     if (!isCaptchaResolved || !wafToken) {
         console.warn(`Requête ignorée : CAPTCHA non résolu ou token manquant (index ${index})`);
@@ -54,11 +54,9 @@ async function fetchAndDisplay(index) {
     }
 }
 
-// Fonction principale pour gérer la séquence
 async function processSequence() {
     while (currentRequest <= totalRequests) {
         if (!isCaptchaResolved || !wafToken) {
-            // Si CAPTCHA non résolu ou token manquant, on attend avant de continuer
             console.log("En attente de la résolution du CAPTCHA...");
             await new Promise((resolve) => setTimeout(resolve, 1000));
             continue;
@@ -67,14 +65,14 @@ async function processSequence() {
         await fetchAndDisplay(currentRequest);
         currentRequest++;
 
-        // Temporisation de 1 seconde entre chaque requête
+      
         await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
     console.log("Séquence terminée !");
 }
 
-// Gestionnaire de soumission du formulaire
+
 document.querySelector("#number-form").addEventListener("submit", (event) => {
     event.preventDefault();
 
@@ -89,15 +87,14 @@ document.querySelector("#number-form").addEventListener("submit", (event) => {
     totalRequests = value;
     currentRequest = 1;
 
-    // Supprime le formulaire et affiche la sortie
+    
     document.querySelector("#number-form").style.display = "none";
     document.querySelector("#output").innerHTML = "";
 
-    // Si le CAPTCHA est déjà résolu, démarre immédiatement
+
     if (isCaptchaResolved && wafToken) {
         processSequence();
     } else {
-        // Sinon, affiche le CAPTCHA et démarre après résolution
         showMyCaptcha(() => {
             console.log("CAPTCHA résolu, démarrage de la séquence.");
             processSequence();
@@ -105,7 +102,7 @@ document.querySelector("#number-form").addEventListener("submit", (event) => {
     }
 });
 
-// Intercepte les erreurs CAPTCHA
+
 window.addEventListener("captcha-required", () => {
     console.log("CAPTCHA requis. Réinitialisation du token.");
     isCaptchaResolved = false;
