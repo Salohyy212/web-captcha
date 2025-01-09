@@ -1,6 +1,8 @@
+// Variables globales
 let currentRequest = 1;
 let totalRequests = 0;
 let isCaptchaResolved = true;
+let wafToken = null;
 
 // Fonction pour afficher le CAPTCHA
 function showMyCaptcha(onCaptchaResolved) {
@@ -8,13 +10,15 @@ function showMyCaptcha(onCaptchaResolved) {
 
     AwsWafCaptcha.renderCaptcha(container, {
         apiKey: window.WAF_API_KEY,
-        onSuccess: (wafToken) => {
+        onSuccess: (token) => {
+            console.log("CAPTCHA résolu avec succès !");
+            wafToken = token; // Stocker le token pour les requêtes
             isCaptchaResolved = true;
-            onCaptchaResolved(wafToken);
+            onCaptchaResolved(token);
         },
         onError: (error) => {
             console.error("Erreur CAPTCHA :", error);
-        }
+        },
     });
 }
 
@@ -26,14 +30,20 @@ async function fetchAndDisplay(index) {
     }
 
     try {
-        const response = await fetch("https://api.prod.jcloudify.com/whoami");
+        const response = await fetch("https://api.prod.jcloudify.com/whoami", {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${wafToken}`, // Inclure le token CAPTCHA
+            },
+        });
+
         if (response.status === 403) {
             const outputDiv = document.querySelector("#output");
             const line = document.createElement("div");
             line.textContent = `${index}. Forbidden`;
             outputDiv.appendChild(line);
         } else if (response.status === 200) {
-            console.log("Accès autorisé, mais réponse inattendue");
+            console.log(`${index}. Accès autorisé, mais réponse inattendue`);
         } else {
             console.error("Erreur API :", response.status);
         }
@@ -89,8 +99,9 @@ document.querySelector("#number-form").addEventListener("submit", (event) => {
 window.addEventListener("captcha-required", () => {
     isCaptchaResolved = false;
 
-    showMyCaptcha((wafToken) => {
+    showMyCaptcha((token) => {
         console.log("CAPTCHA résolu avec succès !");
+        wafToken = token;
         isCaptchaResolved = true;
     });
 });
