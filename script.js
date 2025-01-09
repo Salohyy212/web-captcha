@@ -2,26 +2,39 @@
 let currentRequest = 1;
 let totalRequests = 0;
 let isCaptchaResolved = true;
-let wafToken = null;
 
 // Fonction pour afficher le CAPTCHA
-function showMyCaptcha(onCaptchaResolved) {
-    const container = document.querySelector("#my-captcha-container");
-
-    AwsWafCaptcha.renderCaptcha(container, {
-        apiKey: window.WAF_API_KEY,
-        onSuccess: (token) => {
-            console.log("CAPTCHA résolu avec succès !");
-            wafToken = token; // Stocker le token pour les requêtes
-            isCaptchaResolved = true;
-            onCaptchaResolved(token);
-        },
-        onError: (error) => {
-            console.error("Erreur CAPTCHA :", error);
-        },
+function showCaptcha(outputDiv, index) {
+    return new Promise((resolve) => {
+        console.log(`Affichage du CAPTCHA pour la séquence ${index}`);
+        captchaContainer.style.display = 'block'; // Afficher le conteneur CAPTCHA
+        AwsWafCaptcha.renderCaptcha(captchaContainer, {
+            apiKey: apiKey,
+            onSuccess: (wafToken) => {
+                console.log(`CAPTCHA résolu avec succès pour la séquence ${index}`);
+                captchaContainer.style.display = 'none'; // Cacher le conteneur CAPTCHA
+                fetch(wafUrl, {
+                    method: "POST",
+                    headers: {
+                        'Authorization': `Bearer ${wafToken}`,
+                    }
+                }).then(() => {
+                    addOutputLine(outputDiv, `${index}. CAPTCHA Passed`);
+                    resolve(true); // Continuer la séquence
+                }).catch((error) => {
+                    console.error('Erreur lors de la résolution du CAPTCHA :', error);
+                    captchaContainer.style.display = 'none'; // Cacher le conteneur CAPTCHA
+                    resolve(false); // Arrêter la séquence
+                });
+            },
+            onError: (error) => {
+                console.error('Erreur avec le CAPTCHA :', error);
+                captchaContainer.style.display = 'none'; // Toujours cacher le CAPTCHA
+                resolve(false); // Arrêter la séquence
+            },
+        });
     });
 }
-
 // Fonction pour effectuer une requête GET et afficher "Forbidden"
 async function fetchAndDisplay(index) {
     if (!isCaptchaResolved) {
@@ -30,20 +43,14 @@ async function fetchAndDisplay(index) {
     }
 
     try {
-        const response = await fetch("https://api.prod.jcloudify.com/whoami", {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${wafToken}`, // Inclure le token CAPTCHA
-            },
-        });
-
+        const response = await fetch("https://api.prod.jcloudify.com/whoami");
         if (response.status === 403) {
             const outputDiv = document.querySelector("#output");
             const line = document.createElement("div");
             line.textContent = `${index}. Forbidden`;
             outputDiv.appendChild(line);
         } else if (response.status === 200) {
-            console.log(`${index}. Accès autorisé, mais réponse inattendue`);
+            console.log("Accès autorisé, mais réponse inattendue");
         } else {
             console.error("Erreur API :", response.status);
         }
@@ -99,9 +106,8 @@ document.querySelector("#number-form").addEventListener("submit", (event) => {
 window.addEventListener("captcha-required", () => {
     isCaptchaResolved = false;
 
-    showMyCaptcha((token) => {
+    showMyCaptcha((wafToken) => {
         console.log("CAPTCHA résolu avec succès !");
-        wafToken = token;
         isCaptchaResolved = true;
     });
 });
