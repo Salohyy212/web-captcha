@@ -2,7 +2,7 @@
 let currentRequest = 1;
 let totalRequests = 0;
 let isCaptchaResolved = true;
-
+let wafToken = null;
 
 // Fonction pour afficher le CAPTCHA
 function showMyCaptcha(onCaptchaResolved) {
